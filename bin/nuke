@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+
+MAIN="main"
+
+if [ $# -lt 1 ]; then
+  echo "Deletes all local and remote branches and resets the repository to the first commit"
+  echo "USAGE: nuke REPO"
+  exit
+fi
+
+cd "$1"
+set -x
+
+git reset --hard
+git checkout "${MAIN}"
+
+remote_branches=$(git branch -r --format '%(refname:short)' | grep -v "origin/${MAIN}" | grep "origin/" | cut -d "/" -f 2-)
+
+if [ -n "$remote_branches" ]; then
+  echo "$remote_branches" | xargs -n 20 git push --delete --force origin
+fi
+
+local_branches=$(git branch --format '%(refname:short)' | grep -v "${MAIN}")
+
+if [ -n "$local_branches" ]; then
+  echo "$local_branches" | xargs git branch -D
+fi
+
+git reset --hard `git rev-list --max-parents=0 --abbrev-commit HEAD`

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -eou pipefail
+
+MAIN="main"
+
+if [ "$#" -lt 1 ]; then
+  echo "Provide at least 1 argument pointing to a git repository."
+  exit 1
+fi
+
+repo="$1"
+
+if [ ! -d "${repo}/.git" ]; then
+  echo "Not a valid repository ${repo}"
+  exit 1
+fi
+
+trace () {
+  (set -x; "$@")
+}
+
+BASEDIR=$(dirname "$0")
+GIT_SEQUENCE_EDITOR=`readlink -f ${BASEDIR}/reorder`
+
+cd "$repo"
+
+# Disable certain git features
+git config --local commit.gpgsign false
+
+# if [ ! -f "INITIALIZED" ]  || ! git log -1 > /dev/null; then 
+#   touch "INITIALIZED" && git add . && git commit -am "INITIALIZED"
+# else
+#   git reset --hard
+#   git checkout "$MAIN" 
+# fi
+
+branch="feat/$(date +"%F_%H-%M-%S")"
+
+trace git checkout -b "${branch}"
+
+echo A > A
+git add .
+trace git commit -am "Add A [${branch}]"
+
+echo B > B
+git add .
+trace git commit -am "Add B [${branch}]"
+
+echo C > C
+git add .
+trace git commit -am "Add C [${branch}]"
+
+trace git spr update
+
+(export GIT_SEQUENCE_EDITOR; trace git rebase -i "${MAIN}")
+
+trace git spr update
